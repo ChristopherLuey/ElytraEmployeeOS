@@ -55,11 +55,11 @@ export const CoverImageModal = () => {
   return (
     <Dialog open={coverImage.isOpen} onOpenChange={coverImage.onClose}>
       <DialogTitle>
-        <h1 className="sr-only">Change Cover Image</h1>
+        <div className="sr-only">Change Cover Image</div>
       </DialogTitle>
       <DialogContent>
         <DialogHeader>
-          <h2 className="text-center text-lg font-semibold">Cover Image</h2>
+          <h2 className="text-lg font-semibold">Cover Image</h2>
         </DialogHeader>
         <SingleImageDropzone
           className="w-full outline-none"

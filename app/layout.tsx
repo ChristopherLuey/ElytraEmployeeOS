@@ -11,20 +11,20 @@ import { EdgeStoreProvider } from "@/lib/edgestore";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Zotion",
+  title: "ElytraOS",
   description:
-    "The seamless platform where creative and productive work happens.",
+    "Elytra Robotics",
   icons: {
     icon: [
       {
         media: "(prefers-color-scheme: light)",
-        url: "/logo.svg",
-        href: "/logo.svg",
+        url: "/ElytraLogo.svg",
+        href: "/ElytraLogo.svg",
       },
       {
         media: "(prefers-color-scheme: dark)",
-        url: "/logo-dark.svg",
-        href: "/logo-dark.svg",
+        url: "/ElytraLogo.svg",
+        href: "/ElytraLogo.svg",
       },
     ],
   },

@@ -11,14 +11,12 @@ export const Heading = () => {
   const { isAuthenticated, isLoading } = useConvexAuth();
 
   return (
-    <div className="max-w-3xl space-y-4">
-      <h1 className="text-3xl font-bold sm:text-5xl md:text-5xl">
-        Your Ideas💡, Documents📕, & Plans🚀. Welcome to{" "}
-        <span className="underline">Zotion</span>
+    <div className="max-w-5xl space-y-6">
+      <h1 className="text-5xl font-bold sm:text-6xl md:text-7xl">
+        Welcome to <span className="bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent">Elytra Robotics</span>
       </h1>
-      <h2 className="text-base font-medium sm:text-xl">
-        Zotion is the connected workspace where <br /> better, faster work
-        happens.
+      <h2 className="text-base font-medium sm:text-3xl">
+        ElytraOS is our Employee Portal
       </h2>
       {isLoading && (
         <div className="flex w-full items-center justify-center">
@@ -28,7 +26,7 @@ export const Heading = () => {
       {isAuthenticated && !isLoading && (
         <Button asChild>
           <Link href="/documents">
-            Enter Zotion
+            Enter Elytra OS
             <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
         </Button>
@@ -36,7 +34,7 @@ export const Heading = () => {
       {!isAuthenticated && !isLoading && (
         <SignInButton mode="modal">
           <Button>
-            Get Zotion free
+            Login to Elytra OS
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </SignInButton>
