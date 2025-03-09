@@ -233,28 +233,30 @@ export const getById = query({
   args: { documentId: v.id("documents") },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-
+    
+    // Require authentication for all requests
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    
+    const userId = identity.subject;
     const document = await ctx.db.get(args.documentId);
 
     if (!document) {
       throw new Error("Document not found");
     }
 
+    // Owner can always access their own documents
+    if (document.userId === userId) {
+      return document;
+    }
+    
+    // For non-owners, only allow access if the document is published and not archived
     if (document.isPublished && !document.isArchived) {
       return document;
     }
 
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const userId = identity.subject;
-
-    if (document.userId !== userId) {
-      throw new Error("Not authorized");
-    }
-
-    return document;
+    throw new Error("Not authorized");
   },
 });
 
