@@ -239,24 +239,14 @@ export const getById = query({
       throw new Error("Not authenticated");
     }
     
-    const userId = identity.subject;
     const document = await ctx.db.get(args.documentId);
 
     if (!document) {
       throw new Error("Document not found");
     }
 
-    // Owner can always access their own documents
-    if (document.userId === userId) {
-      return document;
-    }
-    
-    // For non-owners, only allow access if the document is published and not archived
-    if (document.isPublished && !document.isArchived) {
-      return document;
-    }
-
-    throw new Error("Not authorized");
+    // Return the document for all authenticated users
+    return document;
   },
 });
 
