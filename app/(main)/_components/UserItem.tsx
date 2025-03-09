@@ -52,7 +52,7 @@ export const UserItem = () => {
             </div>
             <div className="space-y-1">
               <p className="line-clamp-1 text-sm">
-                {user?.fullName}
+                {user?.fullName} (Elytra Employee)
               </p>
             </div>
           </div>

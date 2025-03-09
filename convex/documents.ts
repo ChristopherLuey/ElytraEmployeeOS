@@ -61,12 +61,10 @@ export const getSidebar = query({
       throw new Error("Not authenticated");
     }
 
-    const userId = identity.subject;
-
     const documents = await ctx.db
       .query("documents")
-      .withIndex("by_user_parent", (q) =>
-        q.eq("userId", userId).eq("parentDocument", args.parentDocument),
+      .withIndex("by_parent", (q) => 
+        q.eq("parentDocument", args.parentDocument)
       )
       .filter((q) => q.eq(q.field("isArchived"), false))
       .order("desc")
@@ -216,11 +214,8 @@ export const getSearch = query({
       throw new Error("Not authenticated");
     }
 
-    const userId = identity.subject;
-
     const documents = await ctx.db
       .query("documents")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
       .filter((q) => q.eq(q.field("isArchived"), false))
       .order("desc")
       .collect();
@@ -242,10 +237,10 @@ export const getById = query({
     const document = await ctx.db.get(args.documentId);
 
     if (!document) {
-      throw new Error("Document not found");
+      return null; // Return null instead of throwing an error for not found
     }
 
-    // Return the document for all authenticated users
+    // Return the document regardless of ownership or publication status
     return document;
   },
 });
@@ -266,18 +261,12 @@ export const update = mutation({
       throw new Error("Not authenticated");
     }
 
-    const userId = identity.subject;
-
     const { id, ...rest } = args;
 
     const existingDocument = await ctx.db.get(args.id);
 
     if (!existingDocument) {
       throw new Error("Document not found");
-    }
-
-    if (existingDocument.userId !== userId) {
-      throw new Error("Unauthorized");
     }
 
     const document = await ctx.db.patch(args.id, {

@@ -29,7 +29,7 @@ const DocumentsPage = () => {
   return (
     <div className="flex h-full flex-col items-center justify-center space-y-4">
       <Image
-        src="/empty.svg"
+        src="/ElytraLogo.svg"
         alt="empty"
         height="300"
         width="300"
@@ -37,7 +37,7 @@ const DocumentsPage = () => {
         className="h-auto dark:hidden"
       />
       <Image
-        src="/empty-dark.svg"
+        src="/ElytraLogo.svg"
         alt="empty"
         height="300"
         width="300"
@@ -45,7 +45,7 @@ const DocumentsPage = () => {
         className="hidden h-auto dark:block"
       />
       <h2 className="text-lg font-medium">
-        Welcome to {user?.firstName}
+        Welcome to ElytraOS
       </h2>
       <Button onClick={onCreate}>
         <PlusCircle className="mr-2 h-4 w-4" />
