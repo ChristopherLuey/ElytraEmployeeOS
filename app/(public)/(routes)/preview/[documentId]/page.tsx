@@ -29,11 +29,8 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
 
   const update = useMutation(api.documents.update);
 
-  const onChange = (content: string) => {
-    update({
-      id: params.documentId,
-      content,
-    });
+  const onChange = () => {
+    // No-op in preview mode - prevents updates
   };
 
   if (document === undefined) {

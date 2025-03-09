@@ -229,7 +229,7 @@ export const getById = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     
-    // Require authentication for all requests
+    // Only check for authentication
     if (!identity) {
       throw new Error("Not authenticated");
     }
@@ -240,7 +240,7 @@ export const getById = query({
       return null; // Return null instead of throwing an error for not found
     }
 
-    // Return the document regardless of ownership or publication status
+    // Return any document as long as the user is authenticated
     return document;
   },
 });
