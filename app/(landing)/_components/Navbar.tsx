@@ -27,11 +27,11 @@ export const Navbar = () => {
           {isLoading && <Spinner />}
           {!isLoading && !isAuthenticated && (
             <>
-              {/* <SignInButton mode="modal">
+              <SignInButton mode="modal">
                 <Button variant="ghost" size="sm">
                   Log In
                 </Button>
-              </SignInButton> */}
+              </SignInButton>
               <SignInButton mode="modal">
                 <Button size="sm">Login to Elytra OS</Button>
               </SignInButton>
