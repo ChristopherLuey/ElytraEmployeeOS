@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 
 import { Cover } from "@/components/cover";
 import { Toolbar } from "@/components/toolbar";
@@ -22,6 +22,8 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
     () => dynamic(() => import("@/components/editor"), { ssr: false }),
     [],
   );
+
+  const isLocalUpdate = useRef(false);
 
   const document = useQuery(api.documents.getById, {
     documentId: params.documentId,
@@ -63,6 +65,7 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
           onChange={onChange}
           initialContent={document.content}
           documentId={params.documentId}
+          isLocalUpdate={isLocalUpdate}
         />
       </div>
     </div>

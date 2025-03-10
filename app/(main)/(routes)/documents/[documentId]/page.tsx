@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo } from "react";
+import { useMemo, useEffect, useRef } from "react";
 
 import { Cover } from "@/components/cover";
 import { Toolbar } from "@/components/toolbar";
@@ -23,6 +23,8 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
     [],
   );
 
+  const isLocalUpdate = useRef(false);
+  
   const document = useQuery(api.documents.getById, {
     documentId: params.documentId,
   });
@@ -30,10 +32,16 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
   const update = useMutation(api.documents.update);
 
   const onChange = (content: string) => {
+    isLocalUpdate.current = true;
+    
     update({
       id: params.documentId,
       content,
     });
+    
+    setTimeout(() => {
+      isLocalUpdate.current = false;
+    }, 1000);
   };
 
   if (document === undefined) {
@@ -65,9 +73,11 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
           onChange={onChange} 
           initialContent={document.content} 
           documentId={params.documentId}
+          isLocalUpdate={isLocalUpdate}
         />
       </div>
     </div>
   );
 };
+
 export default DocumentIdPage;

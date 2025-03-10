@@ -7,7 +7,7 @@ import { useTheme } from "next-themes";
 import { useEdgeStore } from "@/lib/edgestore";
 import "@blocknote/core/style.css";
 import "@blocknote/mantine/style.css";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, MutableRefObject } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -19,19 +19,30 @@ interface EditorProps {
   initialContent?: string;
   editable?: boolean;
   documentId: string;
+  isLocalUpdate?: MutableRefObject<boolean>;
 }
 
-const Editor = ({ onChange, initialContent, editable = true, documentId }: EditorProps) => {
+const Editor = ({ onChange, initialContent, editable = true, documentId, isLocalUpdate }: EditorProps) => {
   const { resolvedTheme } = useTheme();
   const { edgestore } = useEdgeStore();
   const { user } = useUser();
   const [isEditing, setIsEditing] = useState(false);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const editorRef = useRef<BlockNoteEditor | null>(null);
+  const lastContentRef = useRef<string | null>(null);
+  
+  // Track if editor is mounted
+  const [isEditorReady, setIsEditorReady] = useState(false);
   
   // Get current active users for this document
   const activeUsers = useQuery(api.documents.getActiveUsers, {
     documentId: documentId as Id<"documents">,
   }) || [];
+  
+  // Query the document content for real-time updates
+  const documentData = useQuery(api.documents.getById, {
+    documentId: documentId as Id<"documents">,
+  });
   
   // Mutations for managing active users
   const registerUser = useMutation(api.documents.registerActiveUser);
@@ -77,12 +88,45 @@ const Editor = ({ onChange, initialContent, editable = true, documentId }: Edito
     return res.url;
   };
 
-  const editor: BlockNoteEditor = useCreateBlockNote({
+  // Setup the editor
+  const editor = useCreateBlockNote({
     initialContent: initialContent
       ? (JSON.parse(initialContent) as PartialBlock[])
       : undefined,
     uploadFile: handleUpload,
   });
+
+  // Save editor reference
+  useEffect(() => {
+    editorRef.current = editor;
+    setIsEditorReady(true);
+    if (initialContent) {
+      lastContentRef.current = initialContent;
+    }
+  }, [editor, initialContent]);
+
+  // Handle real-time updates from other users
+  useEffect(() => {
+    // Skip if we're not ready or if this is a local update
+    if (!isEditorReady || !documentData || !documentData.content || isLocalUpdate?.current) {
+      return;
+    }
+    
+    // Skip if content hasn't changed
+    if (lastContentRef.current === documentData.content) {
+      return;
+    }
+    
+    // Update the editor content
+    try {
+      const newContent = JSON.parse(documentData.content);
+      editorRef.current?.replaceBlocks(editorRef.current.document, newContent);
+      lastContentRef.current = documentData.content;
+      console.log("Updated editor with remote changes");
+    } catch (error) {
+      console.error("Failed to parse document content:", error);
+    }
+  }, [documentData?.content, isEditorReady, isLocalUpdate]);
 
   // Debounced onChange to avoid too many updates
   const handleEditorChange = () => {
@@ -97,7 +141,9 @@ const Editor = ({ onChange, initialContent, editable = true, documentId }: Edito
     
     // Set new timer
     debounceTimerRef.current = setTimeout(() => {
-      onChange(JSON.stringify(editor.document, null, 2));
+      const content = JSON.stringify(editor.document, null, 2);
+      lastContentRef.current = content; // Update last content to avoid loops
+      onChange(content);
       setIsEditing(false);
     }, 500);
   };
