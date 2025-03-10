@@ -62,6 +62,7 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
           editable={false}
           onChange={onChange}
           initialContent={document.content}
+          documentId={params.documentId}
         />
       </div>
     </div>
