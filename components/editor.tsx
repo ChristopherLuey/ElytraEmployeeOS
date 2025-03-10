@@ -297,8 +297,8 @@ const Editor = ({ onChange, initialContent, editable = true, documentId, isLocal
 
   return (
     <div className="relative" ref={editorContainerRef}>
-      {/* Show active collaborators - improved visibility */}
-      <div className="absolute right-2 top-2 z-50 flex items-center gap-1 rounded-full bg-green-500/20 px-3 py-1.5 text-xs font-medium text-green-600 shadow-sm border border-green-500/20">
+      {/* Show active collaborators - positioned higher to align with title */}
+      <div className="absolute -top-14 right-2 z-50 flex items-center gap-1 rounded-full bg-green-500/20 px-3 py-1.5 text-xs font-medium text-green-600 shadow-sm border border-green-500/20">
         <span>
           {activeUsers.length} {activeUsers.length === 1 ? 'user' : 'users'} active
           {isEditing && " • Saving..."}
