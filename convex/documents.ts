@@ -334,3 +334,88 @@ export const removeCoverImage = mutation({
     return document;
   },
 });
+
+export const registerActiveUser = mutation({
+  args: {
+    documentId: v.id("documents"),
+    userId: v.string(),
+    userName: v.string(),
+    userImageUrl: v.optional(v.string()),
+    lastActive: v.number()
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    
+    if (!identity) {
+      throw new Error("Unauthenticated");
+    }
+    
+    // Check if this user is already registered
+    const existingUser = await ctx.db
+      .query("activeUsers")
+      .withIndex("by_document", (q) => 
+        q.eq("documentId", args.documentId).eq("userId", args.userId)
+      )
+      .unique();
+    
+    if (existingUser) {
+      // Update the lastActive timestamp
+      return await ctx.db.patch(existingUser._id, {
+        lastActive: args.lastActive
+      });
+    } else {
+      // Register new active user
+      return await ctx.db.insert("activeUsers", {
+        documentId: args.documentId,
+        userId: args.userId,
+        userName: args.userName,
+        userImageUrl: args.userImageUrl,
+        lastActive: args.lastActive
+      });
+    }
+  }
+});
+
+export const unregisterActiveUser = mutation({
+  args: {
+    documentId: v.id("documents"),
+    userId: v.string()
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    
+    if (!identity) {
+      throw new Error("Unauthenticated");
+    }
+    
+    // Find and delete the active user entry
+    const activeUser = await ctx.db
+      .query("activeUsers")
+      .withIndex("by_document", (q) => 
+        q.eq("documentId", args.documentId).eq("userId", args.userId)
+      )
+      .unique();
+    
+    if (activeUser) {
+      await ctx.db.delete(activeUser._id);
+    }
+    
+    return { success: true };
+  }
+});
+
+export const getActiveUsers = query({
+  args: {
+    documentId: v.id("documents")
+  },
+  handler: async (ctx, args) => {
+    // Get all active users, filtering out any that haven't been active in the last 2 minutes
+    const twoMinutesAgo = Date.now() - 2 * 60 * 1000;
+    
+    return await ctx.db
+      .query("activeUsers")
+      .withIndex("by_document", (q) => q.eq("documentId", args.documentId))
+      .filter((q) => q.gt(q.field("lastActive"), twoMinutesAgo))
+      .collect();
+  }
+});

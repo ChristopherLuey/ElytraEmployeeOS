@@ -15,4 +15,14 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_user_parent", ["userId", "parentDocument"])
     .index("by_parent", ["parentDocument"]),
+
+  activeUsers: defineTable({
+    documentId: v.id("documents"),
+    userId: v.string(),
+    userName: v.string(),
+    userImageUrl: v.optional(v.string()),
+    lastActive: v.number()
+  })
+  .index("by_document", ["documentId"])
+  .index("by_document_user", ["documentId", "userId"]),
 });
