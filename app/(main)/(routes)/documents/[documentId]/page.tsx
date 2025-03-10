@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo, useEffect, useRef } from "react";
+import { useMemo, useRef } from "react";
 
 import { Cover } from "@/components/cover";
 import { Toolbar } from "@/components/toolbar";
@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useMutation, useQuery } from "convex/react";
+import { toast } from "sonner";
 
 interface DocumentIdPageProps {
   params: {
@@ -23,6 +24,7 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
     [],
   );
 
+  // Track if we're causing the update
   const isLocalUpdate = useRef(false);
   
   const document = useQuery(api.documents.getById, {
@@ -32,13 +34,20 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
   const update = useMutation(api.documents.update);
 
   const onChange = (content: string) => {
+    // Mark as local update
     isLocalUpdate.current = true;
     
-    update({
+    const promise = update({
       id: params.documentId,
       content,
     });
     
+    // Show error if there's a problem updating
+    promise.catch(() => {
+      toast.error("Failed to save changes");
+    });
+    
+    // Reset local update flag after a delay
     setTimeout(() => {
       isLocalUpdate.current = false;
     }, 1000);
