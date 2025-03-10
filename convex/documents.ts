@@ -346,7 +346,16 @@ export const registerActiveUser = mutation({
     userId: v.string(),
     userName: v.string(),
     userImageUrl: v.optional(v.string()),
-    lastActive: v.number()
+    lastActive: v.number(),
+    cursorPosition: v.optional(v.object({
+      x: v.number(),
+      y: v.number(),
+      selection: v.optional(v.object({
+        start: v.number(),
+        end: v.number(),
+        blockId: v.optional(v.string())
+      }))
+    }))
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -364,9 +373,10 @@ export const registerActiveUser = mutation({
       .unique();
     
     if (existingUser) {
-      // Update the lastActive timestamp
+      // Update the lastActive timestamp and cursor position
       return await ctx.db.patch(existingUser._id, {
-        lastActive: args.lastActive
+        lastActive: args.lastActive,
+        cursorPosition: args.cursorPosition
       });
     } else {
       // Register new active user
@@ -375,7 +385,8 @@ export const registerActiveUser = mutation({
         userId: args.userId,
         userName: args.userName,
         userImageUrl: args.userImageUrl,
-        lastActive: args.lastActive
+        lastActive: args.lastActive,
+        cursorPosition: args.cursorPosition
       });
     }
   }
@@ -422,5 +433,48 @@ export const getActiveUsers = query({
       .withIndex("by_document_user", (q) => q.eq("documentId", args.documentId))
       .filter((q) => q.gt(q.field("lastActive"), twoMinutesAgo))
       .collect();
+  }
+});
+
+// Add a new mutation for real-time cursor position updates
+export const updateCursorPosition = mutation({
+  args: {
+    documentId: v.id("documents"),
+    userId: v.string(),
+    cursorPosition: v.object({
+      x: v.number(),
+      y: v.number(),
+      selection: v.optional(v.object({
+        start: v.number(),
+        end: v.number(),
+        blockId: v.optional(v.string())
+      }))
+    })
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    
+    if (!identity) {
+      throw new Error("Unauthenticated");
+    }
+    
+    // Find the active user entry
+    const activeUser = await ctx.db
+      .query("activeUsers")
+      .withIndex("by_document_user", (q) => 
+        q.eq("documentId", args.documentId).eq("userId", args.userId)
+      )
+      .unique();
+    
+    if (activeUser) {
+      // Update just the cursor position and activity time
+      return await ctx.db.patch(activeUser._id, {
+        cursorPosition: args.cursorPosition,
+        lastActive: Date.now()
+      });
+    }
+    
+    // If no existing record, return null (client should call registerActiveUser instead)
+    return null;
   }
 });

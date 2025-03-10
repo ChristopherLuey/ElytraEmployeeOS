@@ -21,7 +21,16 @@ export default defineSchema({
     userId: v.string(),
     userName: v.string(),
     userImageUrl: v.optional(v.string()),
-    lastActive: v.number()
+    lastActive: v.number(),
+    cursorPosition: v.optional(v.object({
+      x: v.number(),
+      y: v.number(),
+      selection: v.optional(v.object({
+        start: v.number(),
+        end: v.number(),
+        blockId: v.optional(v.string())
+      }))
+    }))
   })
   .index("by_document", ["documentId"])
   .index("by_document_user", ["documentId", "userId"]),

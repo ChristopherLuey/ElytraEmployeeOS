@@ -22,12 +22,57 @@ interface EditorProps {
   isLocalUpdate?: MutableRefObject<boolean>;
 }
 
+// Define types for cursor positions
+interface CursorPosition {
+  x: number;
+  y: number;
+  selection?: {
+    start: number;
+    end: number;
+    blockId?: string;
+  };
+}
+
+// CSS for remote cursors
+const cursorStyles = `
+  .remote-cursor {
+    position: absolute;
+    pointer-events: none;
+    z-index: 30;
+    transition: transform 0.1s ease;
+  }
+  .remote-cursor::before {
+    content: '';
+    position: absolute;
+    width: 2px;
+    height: 20px;
+    background-color: currentColor;
+    left: 0;
+    top: 0;
+  }
+  .remote-cursor::after {
+    content: attr(data-name);
+    position: absolute;
+    background-color: currentColor;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+    white-space: nowrap;
+    left: 0;
+    top: -20px;
+  }
+`;
+
 const Editor = ({ onChange, initialContent, editable = true, documentId, isLocalUpdate }: EditorProps) => {
   const { resolvedTheme } = useTheme();
   const { edgestore } = useEdgeStore();
   const { user } = useUser();
   const [isEditing, setIsEditing] = useState(false);
+  const [cursorPosition, setCursorPosition] = useState<CursorPosition | null>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const cursorUpdateTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const editorContainerRef = useRef<HTMLDivElement | null>(null);
   
   // Get current active users for this document
   const activeUsers = useQuery(api.documents.getActiveUsers, {
@@ -45,6 +90,36 @@ const Editor = ({ onChange, initialContent, editable = true, documentId, isLocal
   // Mutations for managing active users
   const registerUser = useMutation(api.documents.registerActiveUser);
   const unregisterUser = useMutation(api.documents.unregisterActiveUser);
+  const updateCursor = useMutation(api.documents.updateCursorPosition);
+  
+  // Track mouse movement for cursor position
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!editorContainerRef.current || !user) return;
+    
+    // Get the container's position
+    const rect = editorContainerRef.current.getBoundingClientRect();
+    
+    // Calculate relative position within the editor
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // Store the new position
+    const newPosition = { x, y };
+    setCursorPosition(newPosition);
+    
+    // Debounce the cursor position updates to reduce server load
+    if (cursorUpdateTimerRef.current) {
+      clearTimeout(cursorUpdateTimerRef.current);
+    }
+    
+    cursorUpdateTimerRef.current = setTimeout(() => {
+      updateCursor({
+        documentId: documentId as Id<"documents">,
+        userId: user.id,
+        cursorPosition: newPosition
+      });
+    }, 50); // Update every 50ms max to avoid too many requests
+  };
   
   // Register this user as active when the component mounts
   useEffect(() => {
@@ -54,7 +129,8 @@ const Editor = ({ onChange, initialContent, editable = true, documentId, isLocal
         userId: user.id,
         userName: user.fullName || "Anonymous",
         userImageUrl: user.imageUrl || "",
-        lastActive: Date.now()
+        lastActive: Date.now(),
+        cursorPosition: cursorPosition || undefined
       });
       
       // Set up interval to update "lastActive" timestamp
@@ -64,9 +140,20 @@ const Editor = ({ onChange, initialContent, editable = true, documentId, isLocal
           userId: user.id,
           userName: user.fullName || "Anonymous",
           userImageUrl: user.imageUrl || "",
-          lastActive: Date.now()
+          lastActive: Date.now(),
+          cursorPosition: cursorPosition || undefined
         });
       }, 30000); // Update every 30 seconds
+      
+      // Add event listener for cursor tracking
+      if (editorContainerRef.current) {
+        editorContainerRef.current.addEventListener('mousemove', handleMouseMove);
+      }
+      
+      // Inject the CSS styles for cursors
+      const styleElement = document.createElement('style');
+      styleElement.textContent = cursorStyles;
+      document.head.appendChild(styleElement);
       
       // Unregister when component unmounts
       return () => {
@@ -75,9 +162,15 @@ const Editor = ({ onChange, initialContent, editable = true, documentId, isLocal
           documentId: documentId as Id<"documents">,
           userId: user.id
         });
+        
+        if (editorContainerRef.current) {
+          editorContainerRef.current.removeEventListener('mousemove', handleMouseMove);
+        }
+        
+        document.head.removeChild(styleElement);
       };
     }
-  }, [user, documentId, registerUser, unregisterUser]);
+  }, [user, documentId, registerUser, unregisterUser, updateCursor]);
 
   const handleUpload = async (file: File) => {
     const res = await edgestore.publicFiles.upload({
@@ -178,8 +271,45 @@ const Editor = ({ onChange, initialContent, editable = true, documentId, isLocal
     }, 500);
   };
 
+  // Render remote cursors
+  const renderRemoteCursors = () => {
+    if (!user) return null;
+    
+    return activeUsers
+      .filter(activeUser => 
+        activeUser.userId !== user.id && 
+        activeUser.cursorPosition
+      )
+      .map(activeUser => {
+        // Generate a unique color based on the user's ID
+        const color = `hsl(${hashString(activeUser.userId) % 360}, 70%, 50%)`;
+        
+        return (
+          <div 
+            key={activeUser.userId}
+            className="remote-cursor"
+            data-name={activeUser.userName}
+            style={{
+              transform: `translate(${activeUser.cursorPosition?.x || 0}px, ${activeUser.cursorPosition?.y || 0}px)`,
+              color
+            }}
+          />
+        );
+      });
+  };
+  
+  // Simple hash function for generating colors from user IDs
+  const hashString = (str: string): number => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) - hash) + str.charCodeAt(i);
+      hash |= 0; // Convert to 32bit integer
+    }
+    return Math.abs(hash);
+  };
+
   return (
-    <div className="relative">
+    <div className="relative" ref={editorContainerRef}>
       {/* Show active collaborators */}
       {activeUsers.length > 0 && (
         <div className="absolute right-2 top-2 flex items-center gap-1 rounded-full bg-green-500/10 px-3 py-1 text-xs text-green-500">
@@ -212,6 +342,22 @@ const Editor = ({ onChange, initialContent, editable = true, documentId, isLocal
             )}
           </div>
         </div>
+      )}
+      
+      {/* Render remote cursors */}
+      {renderRemoteCursors()}
+      
+      {/* Local cursor visualization (helps the user see their own cursor) */}
+      {user && cursorPosition && (
+        <div 
+          className="remote-cursor"
+          data-name={`${user.fullName || 'You'} (You)`}
+          style={{
+            transform: `translate(${cursorPosition.x}px, ${cursorPosition.y}px)`,
+            color: "rgba(59, 130, 246, 0.5)", // Blue with transparency
+            opacity: 0.5 // Make it semi-transparent so it doesn't interfere with editing
+          }}
+        />
       )}
       
       <BlockNoteView
