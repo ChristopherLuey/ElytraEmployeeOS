@@ -353,7 +353,7 @@ export const registerActiveUser = mutation({
     // Check if this user is already registered
     const existingUser = await ctx.db
       .query("activeUsers")
-      .withIndex("by_document", (q) => 
+      .withIndex("by_document_user", (q) => 
         q.eq("documentId", args.documentId).eq("userId", args.userId)
       )
       .unique();
@@ -391,7 +391,7 @@ export const unregisterActiveUser = mutation({
     // Find and delete the active user entry
     const activeUser = await ctx.db
       .query("activeUsers")
-      .withIndex("by_document", (q) => 
+      .withIndex("by_document_user", (q) => 
         q.eq("documentId", args.documentId).eq("userId", args.userId)
       )
       .unique();
@@ -414,7 +414,7 @@ export const getActiveUsers = query({
     
     return await ctx.db
       .query("activeUsers")
-      .withIndex("by_document", (q) => q.eq("documentId", args.documentId))
+      .withIndex("by_document_user", (q) => q.eq("documentId", args.documentId))
       .filter((q) => q.gt(q.field("lastActive"), twoMinutesAgo))
       .collect();
   }
