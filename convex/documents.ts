@@ -12,41 +12,46 @@ export const archive = mutation({
     }
 
     const userId = identity.subject;
-
-    const exisingDocument = await ctx.db.get(args.id);
-
-    if (!exisingDocument) {
-      throw new Error("Document not found");
+    const email = identity.email;
+    const isElytraRobotics = email === "elytrarobotics@gmail.com";
+    
+    const existingDocument = await ctx.db.get(args.id);
+    
+    if (!existingDocument) {
+      throw new Error("Not found");
     }
+    
+    if (isElytraRobotics || existingDocument.userId === userId) {
+      // Recursively archive all child documents
+      const recursiveArchive = async (documentId: Id<"documents">) => {
+        const children = await ctx.db
+          .query("documents")
+          .withIndex("by_parent", (q) => 
+            q.eq("parentDocument", documentId)
+          )
+          .collect();
 
-    if (exisingDocument.userId !== userId) {
-      throw new Error("Not authorized");
+        for (const child of children) {
+          await ctx.db.patch(child._id, {
+            isArchived: true
+          });
+
+          await recursiveArchive(child._id);
+        }
+      };
+
+      // Archive the parent document
+      const document = await ctx.db.patch(args.id, {
+        isArchived: true
+      });
+      
+      // Archive all children
+      await recursiveArchive(args.id);
+      
+      return document;
     }
-
-    const recursiveArchive = async (documentId: Id<"documents">) => {
-      const children = await ctx.db
-        .query("documents")
-        .withIndex("by_user_parent", (q) =>
-          q.eq("userId", userId).eq("parentDocument", documentId),
-        )
-        .collect();
-
-      for (const child of children) {
-        await ctx.db.patch(child._id, {
-          isArchived: true,
-        });
-
-        await recursiveArchive(child._id);
-      }
-    };
-
-    const document = await ctx.db.patch(args.id, {
-      isArchived: true,
-    });
-
-    recursiveArchive(args.id);
-
-    return document;
+    
+    throw new Error("Failed to archive note.");
   },
 });
 
