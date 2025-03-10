@@ -33,7 +33,7 @@ interface CursorPosition {
   };
 }
 
-// CSS for remote cursors
+// CSS for remote cursors - remove the text box
 const cursorStyles = `
   .remote-cursor {
     position: absolute;
@@ -49,18 +49,6 @@ const cursorStyles = `
     background-color: currentColor;
     left: 0;
     top: 0;
-  }
-  .remote-cursor::after {
-    content: attr(data-name);
-    position: absolute;
-    background-color: currentColor;
-    color: white;
-    padding: 2px 6px;
-    border-radius: 3px;
-    font-size: 12px;
-    white-space: nowrap;
-    left: 0;
-    top: -20px;
   }
 `;
 
@@ -271,7 +259,7 @@ const Editor = ({ onChange, initialContent, editable = true, documentId, isLocal
     }, 500);
   };
 
-  // Render remote cursors
+  // Render remote cursors without name boxes
   const renderRemoteCursors = () => {
     if (!user) return null;
     
@@ -288,7 +276,6 @@ const Editor = ({ onChange, initialContent, editable = true, documentId, isLocal
           <div 
             key={activeUser.userId}
             className="remote-cursor"
-            data-name={activeUser.userName}
             style={{
               transform: `translate(${activeUser.cursorPosition?.x || 0}px, ${activeUser.cursorPosition?.y || 0}px)`,
               color
@@ -310,48 +297,61 @@ const Editor = ({ onChange, initialContent, editable = true, documentId, isLocal
 
   return (
     <div className="relative" ref={editorContainerRef}>
-      {/* Show active collaborators */}
-      {activeUsers.length > 0 && (
-        <div className="absolute right-2 top-2 flex items-center gap-1 rounded-full bg-green-500/10 px-3 py-1 text-xs text-green-500">
-          <span>
-            {activeUsers.length} {activeUsers.length === 1 ? 'user' : 'users'} active
-            {isEditing && " • Saving..."}
-          </span>
-          <div className="flex -space-x-2">
-            {activeUsers.slice(0, 3).map((activeUser) => (
-              <div 
-                key={activeUser.userId}
-                className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-white"
-                title={activeUser.userName}
-              >
-                {activeUser.userImageUrl ? (
-                  <img 
-                    src={activeUser.userImageUrl} 
-                    alt={activeUser.userName}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <UserIcon className="h-3 w-3" />
-                )}
-              </div>
-            ))}
-            {activeUsers.length > 3 && (
-              <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-gray-200 text-xs">
-                +{activeUsers.length - 3}
-              </div>
-            )}
-          </div>
+      {/* Show active collaborators - improved visibility */}
+      <div className="absolute right-2 top-2 z-50 flex items-center gap-1 rounded-full bg-green-500/20 px-3 py-1.5 text-xs font-medium text-green-600 shadow-sm border border-green-500/20">
+        <span>
+          {activeUsers.length} {activeUsers.length === 1 ? 'user' : 'users'} active
+          {isEditing && " • Saving..."}
+        </span>
+        <div className="flex -space-x-2 ml-1">
+          {activeUsers.slice(0, 3).map((activeUser) => (
+            <div 
+              key={activeUser.userId}
+              className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-white shadow-sm"
+              title={activeUser.userName}
+            >
+              {activeUser.userImageUrl ? (
+                <img 
+                  src={activeUser.userImageUrl} 
+                  alt={activeUser.userName}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <UserIcon className="h-3 w-3" />
+              )}
+            </div>
+          ))}
+          {activeUsers.length > 3 && (
+            <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-gray-200 text-xs shadow-sm">
+              +{activeUsers.length - 3}
+            </div>
+          )}
+          {activeUsers.length === 0 && user && (
+            <div 
+              className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-white shadow-sm"
+              title={user.fullName || "You"}
+            >
+              {user.imageUrl ? (
+                <img 
+                  src={user.imageUrl} 
+                  alt={user.fullName || "You"}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <UserIcon className="h-3 w-3" />
+              )}
+            </div>
+          )}
         </div>
-      )}
+      </div>
       
       {/* Render remote cursors */}
       {renderRemoteCursors()}
       
-      {/* Local cursor visualization (helps the user see their own cursor) */}
+      {/* Local cursor without name box */}
       {user && cursorPosition && (
         <div 
           className="remote-cursor"
-          data-name={`${user.fullName || 'You'} (You)`}
           style={{
             transform: `translate(${cursorPosition.x}px, ${cursorPosition.y}px)`,
             color: "rgba(59, 130, 246, 0.5)", // Blue with transparency
